@@ -9,6 +9,8 @@ from logger import LoggingEnv
 nasdaq_symbols = 'ftp://ftp.nasdaqtrader.com/symboldirectory/'
 arca_location = 'ftp://ftp.nyxdata.com/ARCASymbolMapping/ARCASymbolMapping.txt'
 nyse_location = 'ftp://ftp.nyxdata.com/NYSESymbolMapping/NYSESymbolMapping.txt'
+nas_ls_location = 'ftp://ftp.nasdaqtrader.com/symboldirectory/nasdaqlisted.txt'
+nas_tr_location = 'ftp://ftp.nasdaqtrader.com/symboldirectory/nasdaqtraded.txt'
 
 
 def get_version(path: str, file_name: str) -> int:
@@ -44,8 +46,12 @@ def arca_nyse_df(sep: str, f_loc: str) -> pd.DataFrame:
     return df
 
 
-def nasdaq_syms(sep: str, f_loc: str) -> pd.DataFrame():
-    pass
+def nasdaq_df(sep: str, f_loc: str) -> pd.DataFrame:
+    df = pd.read_csv(f_loc, sep=sep)
+    df['CQS_Symbol'] = df['CQS Symbol']
+    df['CQS_Symbol'] = df['CQS_Symbol'].fillna(df['Symbol'])
+
+    return df
 
 
 def main_impl(args) -> int:
@@ -62,6 +68,20 @@ def main_impl(args) -> int:
 
         logging.info(f'Got dataframe of size: {nyse_df.size}')
         make_symlink(nyse_df, args.path, 'symbols_nyse')
+
+    if args.nas_tr:
+        logging.info('Gathering nasdaq traded symbols')
+        nas_tr_df = nasdaq_df(args.sep, nas_tr_location)
+
+        logging.info(f'Got dataframe of size: {nas_tr_df.size}')
+        make_symlink(nas_tr_df, args.path, 'symbols_nasdaq_traded')
+
+    if args.nas_ls:
+        logging.info('Gathering nasdaq listed symbols')
+        nas_ls_df = nasdaq_df(args.sep, nas_ls_location)
+
+        logging.info(f'Got dataframe of size: {nas_ls_df.size}')
+        make_symlink(nas_ls_df, args.path, 'symbols_nasdaq_listed')
 
     return 0
 
