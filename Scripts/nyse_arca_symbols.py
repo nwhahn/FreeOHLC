@@ -1,10 +1,10 @@
-import pandas as pd
-from argparse import ArgumentParser
 import datetime as dt
-import os
 import glob
 import logging
-from logger import LoggingEnv
+import os
+from argparse import ArgumentParser
+
+import pandas as pd
 
 nasdaq_symbols = 'ftp://ftp.nasdaqtrader.com/symboldirectory/'
 arca_location = 'ftp://ftp.nyxdata.com/ARCASymbolMapping/ARCASymbolMapping.txt'
