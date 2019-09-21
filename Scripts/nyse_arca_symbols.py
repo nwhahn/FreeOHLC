@@ -22,14 +22,14 @@ def get_version(path: str, file_name: str) -> int:
         return max([int(v.split('.')[-1]) for v in files]) + 1
 
 
-def make_symlink(df: pd.DataFrame, path: str, sym_name: str) -> None:
+def make_symlink(df: pd.DataFrame, path: str, sym_name: str, sep: str) -> None:
     today = dt.datetime.today().strftime('%Y_%m_%d')
     creation_file = f'{sym_name}_{today}.csv'
     logging.info(f'Generating file with name: {creation_file}')
     version = get_version(path, creation_file)
 
     true_path = f'{path}/{creation_file}.{version}'
-    df.to_csv(true_path)
+    df.to_csv(true_path, sep=sep)
 
     symlink_path = f'{path}/{sym_name}.csv'
     if os.path.exists(symlink_path):
@@ -60,28 +60,28 @@ def main_impl(args) -> int:
         arca_df = arca_nyse_df(args.sep, arca_location)
 
         logging.info(f'Got dataframe of size: {arca_df.size}')
-        make_symlink(arca_df, args.path, 'symbols_arca')
+        make_symlink(arca_df, args.path, 'symbols_arca', args.sep)
 
     if args.nyse:
         logging.info('Gathering nyse symbols')
         nyse_df = arca_nyse_df(args.sep, nyse_location)
 
         logging.info(f'Got dataframe of size: {nyse_df.size}')
-        make_symlink(nyse_df, args.path, 'symbols_nyse')
+        make_symlink(nyse_df, args.path, 'symbols_nyse', args.sep)
 
     if args.nas_tr:
         logging.info('Gathering nasdaq traded symbols')
         nas_tr_df = nasdaq_df(args.sep, nas_tr_location)
 
         logging.info(f'Got dataframe of size: {nas_tr_df.size}')
-        make_symlink(nas_tr_df, args.path, 'symbols_nasdaq_traded')
+        make_symlink(nas_tr_df, args.path, 'symbols_nasdaq_traded', args.sep)
 
     if args.nas_ls:
         logging.info('Gathering nasdaq listed symbols')
         nas_ls_df = nasdaq_df(args.sep, nas_ls_location)
 
         logging.info(f'Got dataframe of size: {nas_ls_df.size}')
-        make_symlink(nas_ls_df, args.path, 'symbols_nasdaq_listed')
+        make_symlink(nas_ls_df, args.path, 'symbols_nasdaq_listed', args.sep)
 
     return 0
 
