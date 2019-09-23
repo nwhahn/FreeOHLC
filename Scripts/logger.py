@@ -2,15 +2,18 @@ import logging
 import datetime as dt
 import os
 import getpass
+import sys
 
 
 class LoggingEnv:
     def __init__(self, application: str):
         self.verify_path()
-        logging.basicConfig(filename=f'/home/jack/log/{application}_{dt.datetime.now().strftime("%Y-%m-%d_%H_%m_%S")}.log',
+        logging.basicConfig(filename=f'/home/{getpass.getuser()}/log/{application}_'
+                                     f'{dt.datetime.now().strftime("%Y-%m-%d_%H_%m_%S")}.log',
                             filemode='w',
                             format='(%(asctime)s) (%(funcName)-8s) [%(levelname)-5s] [%(processName)-8s]: %(message)s',
-                            level=logging.INFO)
+                            level=logging.DEBUG,
+                            stream=sys.stdout)
         logging.info('%%%%%%%%%%%%%%%%%%%%%%%%%')
         logging.info(f'{application}')
         logging.info(f'%%%%%%%%%%%%%%%%%%%%%%%%%')
@@ -18,8 +21,7 @@ class LoggingEnv:
 
     @staticmethod
     def verify_path() -> None:
-        user = getpass.getuser()
-        log_dir = f'/home/{user}/log'
+        log_dir = f'/home/{getpass.getuser()}/log'
         if not os.path.exists(log_dir):
             os.mkdir(log_dir)
 
