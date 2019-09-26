@@ -1,12 +1,16 @@
 import datetime as dt
 import glob
-import logging
+import logger
 import os
 from argparse import ArgumentParser
+import alerting
 
 import pandas as pd
 
-nasdaq_symbols = 'ftp://ftp.nasdaqtrader.com/symboldirectory/'
+app = 'nyse_arca_Symbols'
+logger = logger.get_logger(__name__, app)
+alert = alerting.get_alerter()
+
 arca_location = 'ftp://ftp.nyxdata.com/ARCASymbolMapping/ARCASymbolMapping.txt'
 nyse_location = 'ftp://ftp.nyxdata.com/NYSESymbolMapping/NYSESymbolMapping.txt'
 nas_ls_location = 'ftp://ftp.nasdaqtrader.com/symboldirectory/nasdaqlisted.txt'
@@ -15,7 +19,7 @@ nas_tr_location = 'ftp://ftp.nasdaqtrader.com/symboldirectory/nasdaqtraded.txt'
 
 def get_version(path: str, file_name: str) -> int:
     files = glob.glob(f'{path}/{file_name}.*')
-    logging.info(files)
+    logger.info(files)
     if len(files) == 0:
         return 0
     else:
@@ -25,14 +29,16 @@ def get_version(path: str, file_name: str) -> int:
 def make_symlink(df: pd.DataFrame, path: str, sym_name: str, sep: str) -> None:
     today = dt.datetime.today().strftime('%Y_%m_%d')
     creation_file = f'{sym_name}_{today}.csv'
-    logging.info(f'Generating file with name: {creation_file}')
+    logger.info(f'Generating file with name: {creation_file}')
     version = get_version(path, creation_file)
 
     true_path = f'{path}/{creation_file}.{version}'
+    logger.info(f'Writing out csv to {true_path}')
     df.to_csv(true_path, sep=sep)
 
     symlink_path = f'{path}/{sym_name}.csv'
     if os.path.exists(symlink_path):
+        logger.info(f"Unlinking {symlink_path}")
         os.unlink(symlink_path)
     os.symlink(true_path, symlink_path)
 
@@ -43,6 +49,8 @@ def arca_nyse_df(sep: str, f_loc: str) -> pd.DataFrame:
     df = pd.read_csv(f_loc, sep=sep, header=None)
     df.columns = columns
     df = df.drop(columns='_')
+    logger.info("Dropping extra column")
+
     return df
 
 
@@ -50,38 +58,43 @@ def nasdaq_df(sep: str, f_loc: str) -> pd.DataFrame:
     df = pd.read_csv(f_loc, sep=sep)
     df['CQS_Symbol'] = df['CQS Symbol']
     df['CQS_Symbol'] = df['CQS_Symbol'].fillna(df['Symbol'])
+    logger.info("Changed CQS Symbol to CQS_Symbol and backfilled valued")
 
     return df
 
 
 def main_impl(args) -> int:
     if args.arca:
-        logging.info('Gathering arca symbols')
+        logger.info('Gathering arca symbols')
         arca_df = arca_nyse_df(args.sep, arca_location)
 
-        logging.info(f'Got dataframe of size: {arca_df.size}')
+        logger.info(f'Got dataframe of size: {arca_df.size}')
         make_symlink(arca_df, args.path, 'symbols_arca', args.sep)
+        alert.info("Created arca symlink and csv")
 
     if args.nyse:
-        logging.info('Gathering nyse symbols')
+        logger.info('Gathering nyse symbols')
         nyse_df = arca_nyse_df(args.sep, nyse_location)
 
-        logging.info(f'Got dataframe of size: {nyse_df.size}')
+        logger.info(f'Got dataframe of size: {nyse_df.size}')
         make_symlink(nyse_df, args.path, 'symbols_nyse', args.sep)
+        alert.info("Created nyse symlink and csv")
 
     if args.nas_tr:
-        logging.info('Gathering nasdaq traded symbols')
+        logger.info('Gathering nasdaq traded symbols')
         nas_tr_df = nasdaq_df(args.sep, nas_tr_location)
 
-        logging.info(f'Got dataframe of size: {nas_tr_df.size}')
+        logger.info(f'Got dataframe of size: {nas_tr_df.size}')
         make_symlink(nas_tr_df, args.path, 'symbols_nasdaq_traded', args.sep)
+        alert.info("Created nasdaq trade symlink and csv")
 
     if args.nas_ls:
-        logging.info('Gathering nasdaq listed symbols')
-        nas_ls_df = nasdaq_df(args.sep, nas_ls_location)
+        logger.info('Gathering nasdaq listed symbols')
+        nas_ls_df = pd.read_csv(nas_ls_location, sep=args.sep)
 
-        logging.info(f'Got dataframe of size: {nas_ls_df.size}')
+        logger.info(f'Got dataframe of size: {nas_ls_df.size}')
         make_symlink(nas_ls_df, args.path, 'symbols_nasdaq_listed', args.sep)
+        alert.info("Created nasdaq listed symlink and csv")
 
     return 0
 
@@ -96,7 +109,13 @@ def main():
     parser.add_argument('--sep', help='nyse and nasdaq use |', default='|')
     args = parser.parse_args()
 
-    return main_impl(args)
+    try:
+        rc = main_impl(args)
+    except Exception as e:
+        alert.error("Something happened check log files")
+        alert.error(e)
+
+    alert.send_message(app)
 
 
 if __name__ == '__main__':
