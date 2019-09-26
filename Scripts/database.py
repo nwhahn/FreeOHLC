@@ -4,6 +4,8 @@ import logging
 import os
 os.path.dirname(os.path.abspath(__file__))
 
+# TODO change this to be compatable with postgres
+
 
 class DbInfo:
     def __init__(self, database, schema, table):
