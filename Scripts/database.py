@@ -2,6 +2,7 @@ import pymysql
 import configparser
 import logging
 import os
+import pandas as pd
 os.path.dirname(os.path.abspath(__file__))
 
 # TODO change this to be compatable with postgres
@@ -44,6 +45,9 @@ class Database:
             connection.close()
 
         return output
+
+    def get_df(self, sql: str) -> pd.DataFrame:
+        return pd.DataFrame(self.execute(sql))
 
 
 def get_default():

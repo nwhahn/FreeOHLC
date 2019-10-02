@@ -7,8 +7,8 @@ import alerting
 
 import pandas as pd
 
-app = 'nyse_arca_Symbols'
-logger = logger.get_logger(__name__, app)
+__app__ = 'nyse_arca_Symbols'
+logger = logger.get_logger(__name__, __app__)
 alert = alerting.get_alerter()
 
 arca_location = 'ftp://ftp.nyxdata.com/ARCASymbolMapping/ARCASymbolMapping.txt'
@@ -115,7 +115,7 @@ def main():
         alert.error("Something happened check log files")
         alert.error(e)
 
-    alert.send_message(app)
+    alert.send_message(__app__)
 
 
 if __name__ == '__main__':
